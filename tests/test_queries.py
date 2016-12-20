@@ -1,21 +1,28 @@
-from trelliopg.sql import get_db_adapter
+import pytest
 
+from trelliopg import get_db_adapter
 from . import config
 
-pg = get_db_adapter(config)
+
+@pytest.fixture(scope='function')
+def pg(event_loop):
+    _pg = get_db_adapter(config)
+    return _pg
 
 
-async def test_pool():
+@pytest.mark.asyncio
+async def test_pool(pg):
     pool = await pg.create_pool()
     con = await pool.acquire()
     result = await con.fetch('SELECT * FROM sqrt(16)')
-    assert next(result).sqrt == 4.0
+    assert result[0]['sqrt'] == 4.0
     await pool.close()
 
 
-async def test_pool_connection_transaction_context_manager():
+@pytest.mark.asyncio
+async def test_pool_connection_transaction_context_manager(pg):
     pool = await pg.create_pool()
-    async with pool.transaction() as conn:
-        result = await conn.fetch('SELECT * FROM sqrt(16)')
-
-    assert next(result).sqrt == 4.0
+    async with pool.acquire() as con:
+        async with con.transaction():
+            result = await con.fetchrow('SELECT * FROM sqrt(16)')
+    assert result['sqrt'] == 4.0
