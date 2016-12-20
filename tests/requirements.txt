@@ -1,0 +1,4 @@
+asyncpg
+pytest
+pytest-asyncio
+pytest-capturelog
