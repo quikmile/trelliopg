@@ -1,1 +1,3 @@
-config = {'database': 'travis_ci_test', 'user': 'postgres', 'password': ''}
+config = {'database': 'travis_ci_test',
+          'user': 'postgres',
+          'password': ''}

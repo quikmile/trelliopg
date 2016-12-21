@@ -7,5 +7,6 @@ services:
 before_script:
   - psql -c 'create database travis_ci_test;' -U postgres
 
-install: "pip install asyncpg"
-script: py.test
+install: "pip install -r tests/requirements.txt"
+script:
+  - py.test
