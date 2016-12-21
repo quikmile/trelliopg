@@ -9,4 +9,4 @@ before_script:
 
 install: "pip install -r tests/requirements.txt"
 script:
-  - py.test
+  - py.test --assert=plain
