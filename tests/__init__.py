@@ -1,3 +1,3 @@
 config = {'database': 'travis_ci_test',
-          'user': 'postgres',
+          'user': 'postres',
           'password': ''}

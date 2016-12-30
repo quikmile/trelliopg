@@ -162,11 +162,15 @@ class DBAdapter(object):
                 await con.execute(query)
 
     def _compat(self):
-        async def iterate(self, query: str):
+        ld = {}
+        s = '''async def iterate(self, query: str):
             pool = await self.get_pool()
             async with pool.acquire() as con:
                 async with con.transaction():
                     async for record in con.cursor(query):
-                        yield record
+                        yield record'''
 
-        self.iterate = types.MethodType(iterate, self)
+        exec(s, None, ld)
+        for name, value in ld.items():
+            setattr(DBAdapter, name, value)
+            # self.iterate = types.MethodType(iterate, self)
