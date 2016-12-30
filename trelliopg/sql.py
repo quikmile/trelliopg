@@ -33,27 +33,34 @@ def get_db_adapter(settings=None, config_file=None):
     return db_adapter
 
 
-def async_atomic(func):
+def async_atomic_method(func):
     '''
     first argument will be a conn object
     :param func:
     :return:
     '''
     _db_adapter = get_db_adapter()
-    if hasattr(func, '__self__'):
-        @functools.wraps(func)
-        async def wrapped(self, *args, **kwargs):
-            pool = await _db_adapter.get_pool()
-            async with pool.acquire() as conn:
-                async with conn.transaction():
-                    return await func(self, conn, *args, **kwargs)
-    else:
-        @functools.wraps(func)
-        async def wrapped(*args, **kwargs):
-            pool = await _db_adapter.get_pool()
-            async with pool.acquire() as conn:
-                async with conn.transaction():
-                    return await func(conn, *args, **kwargs)
+
+    @functools.wraps(func)
+    async def wrapped(self, *args, **kwargs):
+        pool = await _db_adapter.get_pool()
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                return await func(self, conn, *args, **kwargs)
+
+    return wrapped
+
+
+def async_atomic_func(func):
+    _db_adapter = get_db_adapter()
+
+    @functools.wraps(func)
+    async def wrapped(*args, **kwargs):
+        pool = await _db_adapter.get_pool()
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                return await func(conn, *args, **kwargs)
+
     return wrapped
 
 
