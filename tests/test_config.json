@@ -1,7 +1,7 @@
 {
   "DATABASE_SETTINGS": {
     "database": "travis_ci_test",
-    "user": "potgres",
+    "user": "postgres",
     "password": ""
   }
 }
