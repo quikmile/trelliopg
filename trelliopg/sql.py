@@ -1,8 +1,8 @@
 import functools
+import types
 
 from asyncpg.connection import connect
 from asyncpg.pool import Pool, create_pool
-from pip._vendor.distlib.version import UnsupportedVersionError
 
 from . import PY_36
 
@@ -157,12 +157,25 @@ class DBAdapter(object):
             async with con.transaction():
                 await con.execute(query)
 
-    async def iterate(self, query: str):  # todo for python 3.6
-        if not PY_36:
-            raise UnsupportedVersionError('asynchronous generator only works with Python 3.6 or greater')
 
-        pool = await self.get_pool()
-        async with pool.acquire() as con:
-            async with con.transaction():
-                async for record in con.cursor(query):
-                    yield record
+if PY_36:
+    s = '''
+        async def iterate(self, query: str):  # todo for python 3.6
+            pool = await self.get_pool()
+            async with pool.acquire() as con:
+                async with con.transaction():
+                    async for record in con.cursor(query):
+                        yield record
+    '''
+    exec(s)
+    DBAdapter.iterate = types.MethodType(iterate, None, DBAdapter)
+
+    # async def iterate(self, query: str):  # todo for python 3.6
+    #     if not PY_36:
+    #         raise UnsupportedVersionError('asynchronous generator only works with Python 3.6 or greater')
+    #
+    #     pool = await self.get_pool()
+    #     async with pool.acquire() as con:
+    #         async with con.transaction():
+    #             async for record in con.cursor(query):
+    #                 yield record
