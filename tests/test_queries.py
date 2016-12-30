@@ -1,6 +1,6 @@
 import pytest
 
-from trelliopg import get_db_adapter
+from trelliopg import get_db_adapter, PY_36
 from . import config
 
 
@@ -28,7 +28,8 @@ async def test_pool_connection_transaction_context_manager(pg):
     assert result['sqrt'] == 4.0
 
 
-@pytest.mark.asyncio
-async def test_iterate_query(pg):
-    async for record in pg.iterate('SELECT * FROM sqrt(16)'):
-        assert record['sqrt'] == 4.0
+if PY_36:
+    @pytest.mark.asyncio
+    async def test_iterate_query(pg):
+        async for record in pg.iterate('SELECT * FROM sqrt(16)'):
+            assert record['sqrt'] == 4.0

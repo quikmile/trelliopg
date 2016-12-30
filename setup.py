@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='trelliopg',
-      version='0.0.1',
+      version='0.0.2',
       author='Abhishek Verma',
       author_email='ashuverma1989@gmail.com',
       url='https://github.com/technomaniac/trelliopg',

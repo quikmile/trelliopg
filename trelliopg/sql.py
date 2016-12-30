@@ -1,6 +1,10 @@
 import functools
-from asyncpg.connection import connect, Connection
+
+from asyncpg.connection import connect
 from asyncpg.pool import Pool, create_pool
+from pip._vendor.distlib.version import UnsupportedVersionError
+
+from . import PY_36
 
 try:
     import ujson as json
@@ -22,6 +26,7 @@ def get_db_adapter(settings=None):
     db_adapter = DBAdapter(**settings)
     return db_adapter
 
+
 def async_atomic(func):
     '''
     first argument will be a conn object
@@ -35,15 +40,16 @@ def async_atomic(func):
             pool = await _db_adapter.get_pool()
             async with pool.acquire() as conn:
                 async with conn.transaction():
-                    return await func(self, conn, *args,**kwargs)
+                    return await func(self, conn, *args, **kwargs)
     else:
         @functools.wraps(func)
         async def wrapped(*args, **kwargs):
             pool = await _db_adapter.get_pool()
             async with pool.acquire() as conn:
                 async with conn.transaction():
-                    return await func(conn, *args,**kwargs)
+                    return await func(conn, *args, **kwargs)
     return wrapped
+
 
 class DBAdapter(object):
     INSERT = """INSERT INTO {table} ({columns}) VALUES ({values}) returning *;"""
@@ -152,7 +158,10 @@ class DBAdapter(object):
                 await con.execute(query)
 
     async def iterate(self, query: str):  # todo for python 3.6
-        pool = await self.create_pool()
+        if not PY_36:
+            raise UnsupportedVersionError('asynchronous generator only works with Python 3.6 or greater')
+
+        pool = await self.get_pool()
         async with pool.acquire() as con:
             async with con.transaction():
                 async for record in con.cursor(query):
