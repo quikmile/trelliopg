@@ -1,12 +1,12 @@
 import pytest
 
 from trelliopg import get_db_adapter, PY_36
-from . import config
 
 
 @pytest.fixture(scope='function')
 def pg(event_loop):
-    _pg = get_db_adapter(config)
+    config_file = './tests/test_config.json'
+    _pg = get_db_adapter(config_file=config_file)
     return _pg
 
 

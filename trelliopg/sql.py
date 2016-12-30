@@ -1,6 +1,5 @@
 import functools
 import sys
-import types
 
 from asyncpg.connection import connect
 from asyncpg.pool import Pool, create_pool
@@ -13,16 +12,22 @@ except ImportError:
     import json
 
 
-def get_db_settings():
-    config_file = './config.json'
+def get_db_settings(config_file=None):
+    if not config_file:
+        config_file = './config.json'
+
     with open(config_file) as f:
         settings = json.load(f)
-    return settings
+
+        if 'DATABASE_SETTINGS' not in settings.keys():
+            raise KeyError('"DATABASE_SETTINGS" key not found in config file')
+
+    return settings['DATABASE_SETTINGS']
 
 
-def get_db_adapter(settings=None):
+def get_db_adapter(settings=None, config_file=None):
     if not settings:
-        settings = get_db_settings()
+        settings = get_db_settings(config_file)
 
     db_adapter = DBAdapter(**settings)
     return db_adapter
