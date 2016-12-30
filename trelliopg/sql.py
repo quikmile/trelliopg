@@ -1,10 +1,11 @@
 import functools
+import sys
 import types
 
 from asyncpg.connection import connect
 from asyncpg.pool import Pool, create_pool
 
-from . import PY_36
+PY_36 = sys.version_info >= (3, 6)
 
 try:
     import ujson as json
