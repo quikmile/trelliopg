@@ -76,6 +76,9 @@ class DBAdapter(object):
         self._params['loop'] = loop
         self._params.update(kwargs)
 
+        if PY_36:
+            self._compat()
+
     @classmethod
     async def connect(cls, database: str = '', user: str = '', password: str = '', host: str = 'localhost',
                       port: int = 5432, loop=None, timeout=60, statement_cache_size=200, command_timeout=None, **opts):
@@ -158,14 +161,12 @@ class DBAdapter(object):
             async with con.transaction():
                 await con.execute(query)
 
+    def _compat(self):
+        async def iterate(self, query: str):
+            pool = await self.get_pool()
+            async with pool.acquire() as con:
+                async with con.transaction():
+                    async for record in con.cursor(query):
+                        yield record
 
-if PY_36:
-    s = '''async def iterate(self, query: str):  # todo for python 3.6
-    pool = await self.get_pool()
-    async with pool.acquire() as con:
-        async with con.transaction():
-            async for record in con.cursor(query):
-                yield record'''
-    exec(s)
-    DBAdapter.iterate = types.MethodType(iterate, DBAdapter)
-
+        self.iterate = types.MethodType(iterate, self)
