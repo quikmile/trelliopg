@@ -167,15 +167,5 @@ if PY_36:
             async for record in con.cursor(query):
                 yield record'''
     exec(s)
-    #print(s)
-    DBAdapter.iterate = types.MethodType(iterate, None, DBAdapter)
+    DBAdapter.iterate = types.MethodType(iterate, DBAdapter)
 
-    # async def iterate(self, query: str):  # todo for python 3.6
-    #     if not PY_36:
-    #         raise UnsupportedVersionError('asynchronous generator only works with Python 3.6 or greater')
-    #
-    #     pool = await self.get_pool()
-    #     async with pool.acquire() as con:
-    #         async with con.transaction():
-    #             async for record in con.cursor(query):
-    #                 yield record
