@@ -173,4 +173,3 @@ class DBAdapter(object):
         exec(s, None, ld)
         for name, value in ld.items():
             setattr(DBAdapter, name, value)
-            # self.iterate = types.MethodType(iterate, self)
