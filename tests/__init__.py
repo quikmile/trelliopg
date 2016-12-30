@@ -1,4 +1,3 @@
-config = {'database': 'user_service',
-          'user': 'abhishek',
-          'password': '1',
-          'port': 5433}
+config = {'database': 'travis_ci_test',
+          'user': 'postgres',
+          'password': ''}
