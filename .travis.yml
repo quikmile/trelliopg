@@ -11,12 +11,3 @@ before_script:
 install: "pip install -r tests/requirements.txt"
 script:
   - py.test --assert=plain
-deploy:
-  - provider: pypi
-    distributions: sdist
-    server: https://testpypi.python.org/pypi
-    user: "technomaniac"
-    password:
-    on:
-      branch: master
-      tags: false
