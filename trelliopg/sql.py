@@ -128,9 +128,9 @@ class DBAdapter(object):
             async with con.transaction():
                 await con.execute(query)
 
-                # async def iterate(self, query: str): #todo for python 3.6
-                #     pool = await self.create_pool()
-                #     async with pool.acquire() as con:
-                #         async with con.transaction():
-                #             async for record in con.cursor(query):
-                #                 yield record
+    async def iterate(self, query: str):  # todo for python 3.6
+        pool = await self.create_pool()
+        async with pool.acquire() as con:
+            async with con.transaction():
+                async for record in con.cursor(query):
+                    yield record

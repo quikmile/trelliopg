@@ -26,3 +26,9 @@ async def test_pool_connection_transaction_context_manager(pg):
         async with con.transaction():
             result = await con.fetchrow('SELECT * FROM sqrt(16)')
     assert result['sqrt'] == 4.0
+
+
+@pytest.mark.asyncio
+async def test_iterate_query(pg):
+    async for record in pg.iterate('SELECT * FROM sqrt(16)'):
+        assert record['sqrt'] == 4.0
