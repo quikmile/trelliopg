@@ -162,11 +162,11 @@ class DBAdapter(object):
 if PY_36:
     s = '''
         async def iterate(self, query: str):  # todo for python 3.6
-            pool = await self.get_pool()
-            async with pool.acquire() as con:
-                async with con.transaction():
-                    async for record in con.cursor(query):
-                        yield record
+                    pool = await self.get_pool()
+                    async with pool.acquire() as con:
+                        async with con.transaction():
+                            async for record in con.cursor(query):
+                                yield record
     '''
     exec(s)
     DBAdapter.iterate = types.MethodType(iterate, None, DBAdapter)
