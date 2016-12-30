@@ -1,4 +1,5 @@
-from asyncpg.connection import connect
+import functools
+from asyncpg.connection import connect, Connection
 from asyncpg.pool import Pool, create_pool
 
 try:
@@ -21,6 +22,28 @@ def get_db_adapter(settings=None):
     db_adapter = DBAdapter(**settings)
     return db_adapter
 
+def async_atomic(func):
+    '''
+    first argument will be a conn object
+    :param func:
+    :return:
+    '''
+    _db_adapter = get_db_adapter()
+    if hasattr(func, '__self__'):
+        @functools.wraps(func)
+        async def wrapped(self, *args, **kwargs):
+            pool = await _db_adapter.get_pool()
+            async with pool.acquire() as conn:
+                async with conn.transaction():
+                    return await func(self, conn, *args,**kwargs)
+    else:
+        @functools.wraps(func)
+        async def wrapped(*args, **kwargs):
+            pool = await _db_adapter.get_pool()
+            async with pool.acquire() as conn:
+                async with conn.transaction():
+                    return await func(conn, *args,**kwargs)
+    return wrapped
 
 class DBAdapter(object):
     INSERT = """INSERT INTO {table} ({columns}) VALUES ({values}) returning *;"""
@@ -63,7 +86,7 @@ class DBAdapter(object):
         cls.con = await connect(**cls._connection_params)
         return cls.con
 
-    async def create_pool(self) -> Pool:
+    async def get_pool(self) -> Pool:
         if not self.pool:
             self.pool = await create_pool(**self._params)
         return self.pool
@@ -74,7 +97,7 @@ class DBAdapter(object):
 
         query = self.INSERT.format(table=table, columns=columns, values=placeholder)
 
-        pool = await self.create_pool()
+        pool = await self.get_pool()
         async with pool.acquire() as con:
             async with con.transaction():
                 result = await con.fetchrow(query, *value_dict.values())
@@ -84,7 +107,7 @@ class DBAdapter(object):
         query = self.SELECT.format(table=table)
         query += ' order by $1 offset $2 limit $3'
 
-        pool = await self.create_pool()
+        pool = await self.get_pool()
         async with pool.acquire() as con:
             stmt = await con.prepare(query)
             results = await stmt.fetch(order_by, offset, limit)
@@ -99,7 +122,7 @@ class DBAdapter(object):
         query += ' and'.join(['{} = ${}'.format(column, i) for i, column in enumerate(where_dict.keys(), start=1)])
         query += ' order by ${} offset ${} limit ${}'.format(param_count + 1, param_count + 2, param_count + 3)
 
-        pool = await self.create_pool()
+        pool = await self.get_pool()
         async with pool.acquire() as con:
             stmt = await con.prepare(query)
             params = list(where_dict.values()) + [order_by, offset, limit]
@@ -112,7 +135,7 @@ class DBAdapter(object):
         where = ' and'.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
         query = self.UPDATE.format(table=table, values=values, where=where)
 
-        pool = await self.create_pool()
+        pool = await self.get_pool()
         async with pool.acquire() as con:
             async with con.transaction():
                 results = await con.fetch(query)
@@ -123,7 +146,7 @@ class DBAdapter(object):
         where = ' and'.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
         query = self.DELETE.format(table=table, where=where)
 
-        pool = await self.create_pool()
+        pool = await self.get_pool()
         async with pool.acquire() as con:
             async with con.transaction():
                 await con.execute(query)
