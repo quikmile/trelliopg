@@ -1,7 +1,7 @@
 {
   "DATABASE_SETTINGS": {
-    "database": "rbac_service",
-    "user": "abhishek",
-    "password": "1"
+    "database": "travis_ci_test",
+    "user": "postgres",
+    "password": ""
   }
 }
