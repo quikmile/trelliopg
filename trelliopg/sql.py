@@ -1,7 +1,9 @@
 import functools
+import itertools
+import os
 import sys
 
-from asyncpg.connection import connect
+from asyncpg.connection import Connection, connect
 from asyncpg.pool import Pool, create_pool
 
 PY_36 = sys.version_info >= (3, 6)
@@ -13,6 +15,9 @@ except ImportError:
 
 
 def get_db_settings(config_file=None):
+    if not config_file:
+        config_file = os.environ.get('CONFIG_FILE')
+
     if not config_file:
         config_file = './config.json'
 
@@ -33,7 +38,7 @@ def get_db_adapter(settings=None, config_file=None):
     return db_adapter
 
 
-def async_atomic_method(func):
+def async_atomic(func):
     '''
     first argument will be a conn object
     :param func:
@@ -43,10 +48,19 @@ def async_atomic_method(func):
 
     @functools.wraps(func)
     async def wrapped(self, *args, **kwargs):
-        pool = await _db_adapter.get_pool()
-        async with pool.acquire() as conn:
+        conn = None
+        for i in itertools.chain(args, kwargs.values()):
+            if type(i) is Connection:
+                conn = i
+                break
+        if not conn:
+            pool = await _db_adapter.get_pool()
+            async with pool.acquire() as conn:
+                async with conn.transaction():
+                    return await func(self, conn, *args, **kwargs)
+        else:
             async with conn.transaction():
-                return await func(self, conn, *args, **kwargs)
+                return await func(self, *args, **kwargs)
 
     return wrapped
 
@@ -56,10 +70,19 @@ def async_atomic_func(func):
 
     @functools.wraps(func)
     async def wrapped(*args, **kwargs):
-        pool = await _db_adapter.get_pool()
-        async with pool.acquire() as conn:
+        conn = None
+        for i in itertools.chain(args, kwargs.values()):
+            if type(i) is Connection:
+                conn = i
+                break
+        if not conn:
+            pool = await _db_adapter.get_pool()
+            async with pool.acquire() as conn:
+                async with conn.transaction():
+                    return await func(conn, *args, **kwargs)
+        else:
             async with conn.transaction():
-                return await func(conn, *args, **kwargs)
+                return await func(*args, **kwargs)
 
     return wrapped
 
@@ -113,17 +136,64 @@ class DBAdapter(object):
             self.pool = await create_pool(**self._params)
         return self.pool
 
-    async def insert(self, table: str, value_dict: dict):
+    async def insert(self, con: Connection = None, table: str = '', value_dict: dict = None):
+
         columns = ",".join(value_dict.keys())
         placeholder = ",".join(['${}'.format(i) for i in range(1, len(value_dict) + 1)])
 
         query = self.INSERT.format(table=table, columns=columns, values=placeholder)
 
-        pool = await self.get_pool()
-        async with pool.acquire() as con:
+        if not con:
+            pool = await self.get_pool()
+            async with pool.acquire() as con:
+                async with con.transaction():
+                    result = await con.fetchrow(query, *value_dict.values())
+        else:
             async with con.transaction():
                 result = await con.fetchrow(query, *value_dict.values())
+
         return result
+
+    async def update(self, con: Connection = None, table: str = '', where_dict: dict = None,
+                     **update_params: dict) -> list:
+
+        values = ','.join(["{}='{}'".format(k, v) for k, v in update_params.items()])
+        where = ' and'.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
+        query = self.UPDATE.format(table=table, values=values, where=where)
+
+        if not con:
+            pool = await self.get_pool()
+            async with pool.acquire() as con:
+                async with con.transaction():
+                    results = await con.fetch(query)
+        else:
+            async with con.transaction():
+                results = await con.fetch(query)
+
+        return results
+
+    async def delete(self, con: Connection = None, table: str = '', where_dict: dict = None):
+        where = ' and'.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
+        query = self.DELETE.format(table=table, where=where)
+
+        if not con:
+            pool = await self.get_pool()
+            async with pool.acquire() as con:
+                async with con.transaction():
+                    await con.execute(query)
+        else:
+            async with con.transaction():
+                await con.execute(query)
+
+    async def execute(self, con: Connection = None, query: str = ''):
+        if not con:
+            pool = await self.get_pool()
+            async with pool.acquire() as con:
+                async with con.transaction():
+                    await con.execute(query)
+        else:
+            async with con.transaction():
+                await con.execute(query)
 
     async def select(self, table: str, offset=0, limit=100, order_by='created desc') -> list:
         query = self.SELECT.format(table=table)
@@ -151,27 +221,6 @@ class DBAdapter(object):
             results = await stmt.fetch(*params)
 
         return results
-
-    async def update(self, table: str, where_dict: dict, **update_params: dict) -> list:
-        values = ','.join(["{}='{}'".format(k, v) for k, v in update_params.items()])
-        where = ' and'.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
-        query = self.UPDATE.format(table=table, values=values, where=where)
-
-        pool = await self.get_pool()
-        async with pool.acquire() as con:
-            async with con.transaction():
-                results = await con.fetch(query)
-
-        return results
-
-    async def delete(self, table: str, where_dict: dict):
-        where = ' and'.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
-        query = self.DELETE.format(table=table, where=where)
-
-        pool = await self.get_pool()
-        async with pool.acquire() as con:
-            async with con.transaction():
-                await con.execute(query)
 
     def _compat(self):
         ld = {}
