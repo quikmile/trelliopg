@@ -32,6 +32,20 @@ async def test_pool_connection_transaction_context_manager(pg):
     assert result['sqrt'] == 4.0
 
 
+@pytest.mark.asyncio
+async def test_shared_pool():
+    pg1 = get_db_adapter()
+    p1 = await pg1.get_pool()
+    c1 = await p1.acquire()
+
+    pg2 = get_db_adapter()
+    p2 = await pg2.get_pool()
+    c2 = await p2.acquire()
+
+    assert id(pg1.pool) == id(pg2.pool)
+    # assert c1 == c2
+
+
 if PY_36:
     @pytest.mark.asyncio
     async def test_iterate_query(pg):

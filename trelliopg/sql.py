@@ -3,7 +3,7 @@ import itertools
 import os
 import sys
 
-from asyncpg.connection import Connection, connect
+from asyncpg.connection import Connection
 from asyncpg.pool import Pool, create_pool
 
 PY_36 = sys.version_info >= (3, 6)
@@ -87,17 +87,25 @@ def async_atomic_func(func):
     return wrapped
 
 
-class DBAdapter(object):
+class Borg(object):
+    __shared_state = dict()
+
+    def __init__(self):
+        self.__dict__ = self.__shared_state
+
+
+class DBAdapter(Borg):
     INSERT = """INSERT INTO {table} ({columns}) VALUES ({values}) returning *;"""
     SELECT = """select * from {table}"""
     UPDATE = """update {table} set {values} {where} returning *"""
     DELETE = """delete from {table} {where}"""
     WHERE = """ where {key} = '{value}'"""
 
-    pool = None
-
     def __init__(self, database: str = '', user: str = '', password: str = '', host: str = 'localhost',
                  port: int = 5432, min_size=10, max_size=50, max_queries=50000, setup=None, loop=None, **kwargs):
+
+        super(DBAdapter, self).__init__()
+
         self._params = dict()
         self._params['database'] = database
         self._params['user'] = user
@@ -111,25 +119,10 @@ class DBAdapter(object):
         self._params['loop'] = loop
         self._params.update(kwargs)
 
+        self.pool = None
+
         if PY_36:
             self._compat()
-
-    @classmethod
-    async def connect(cls, database: str = '', user: str = '', password: str = '', host: str = 'localhost',
-                      port: int = 5432, loop=None, timeout=60, statement_cache_size=200, command_timeout=None, **opts):
-        cls._connection_params = dict()
-        cls._connection_params['database'] = database
-        cls._connection_params['user'] = user
-        cls._connection_params['password'] = password
-        cls._connection_params['host'] = host
-        cls._connection_params['port'] = port
-        cls._connection_params['loop'] = loop
-        cls._connection_params['timeout'] = timeout
-        cls._connection_params['command_timeout'] = command_timeout
-        cls._connection_params.update(opts)
-
-        cls.con = await connect(**cls._connection_params)
-        return cls.con
 
     async def get_pool(self) -> Pool:
         if not self.pool:
