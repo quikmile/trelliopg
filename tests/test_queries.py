@@ -2,6 +2,7 @@ import os
 
 import pytest
 from asyncpg.exceptions import DuplicateTableError, UndefinedTableError
+from trelliopg.sql import async_atomic_func, AtomicExceptionHandler
 
 from trelliopg import get_db_adapter, PY_36, async_atomic
 
@@ -83,13 +84,13 @@ async def test_async_atomic_decorators():
 
     class foo:
 
-        @async_atomic
+        @async_atomic()
         async def setup(self, *args, **kwargs):
             conn = kwargs['conn']
             assert await drop_table(conn, 'DROP TABLE IF EXISTS test_async_atomic;')
             assert await create_table(conn, 'CREATE TABLE IF NOT EXISTS test_async_atomic (id serial primary key);')
 
-        @async_atomic
+        @async_atomic()
         async def inner_query(self, *args, **kwargs):
             conn = kwargs['conn']
             assert await conn.fetch('INSERT INTO test_async_atomic DEFAULT VALUES RETURNING *;')
@@ -97,7 +98,7 @@ async def test_async_atomic_decorators():
         @async_atomic(raise_exception=True)
         async def outer_method_1(self, *args, **kwargs):
             conn = kwargs['conn']
-            await self.inner_query(conn)
+            await self.inner_query(conn=conn)
             assert await conn.fetch('INSERT INTO test_async_atomic DEFAULT VALUES RETURNING *;')
             raise Exception
 
@@ -106,13 +107,19 @@ async def test_async_atomic_decorators():
             conn = kwargs['conn']
             raise Exception('some text')
 
-        @async_atomic(raise_exception=True)
+        @async_atomic(raise_exception=False)
         async def outer_method_2(self, *args, **kwargs):
             conn = kwargs['conn']
-            await self.inner_query(conn)
+            await self.inner_query(conn=conn)
             assert await conn.fetch('INSERT INTO test_async_atomic DEFAULT VALUES RETURNING *;')
 
-        @async_atomic
+        @async_atomic(raise_exception=False)
+        async def outer_method_3(self, *args, **kwargs):
+            conn = kwargs['conn']
+            assert await conn.fetch('INSERT INTO test_async_atomic DEFAULT VALUES RETURNING *;')
+            raise Exception
+
+        @async_atomic(raise_exception=True)
         async def test_atomic_decorator(self, conn):
             await self.setup()
             try:
@@ -122,6 +129,7 @@ async def test_async_atomic_decorators():
                 rt = await conn.fetch('SELECT COUNT(*) FROM test_async_atomic;')
                 print(rt)
                 rt = rt[0]
+                print(tuple(rt)[0])
                 assert tuple(rt)[0] == 0
             await self.outer_method_2()
             rt = await conn.fetch('SELECT COUNT(*) FROM test_async_atomic;')
@@ -131,3 +139,4 @@ async def test_async_atomic_decorators():
             assert type(await self.test_on_exception()) == dict
 
     await foo().test_atomic_decorator()
+
