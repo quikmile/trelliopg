@@ -2,7 +2,7 @@ import functools
 import itertools
 import os
 import sys
-
+from asyncpg.transaction import Transaction
 from asyncpg.connection import Connection
 from asyncpg.pool import Pool, create_pool
 
@@ -12,6 +12,18 @@ try:
     import ujson as json
 except ImportError:
     import json
+
+class AtomicExceptionHandler:
+
+    def __init__(self, exp_coro):
+        self.exp_coro = exp_coro
+
+    async def __aenter__(self):
+        pass
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            await self.exp_coro(exc_type, exc_val, exc_tb)
 
 
 def get_db_settings(config_file=None):
@@ -38,53 +50,93 @@ def get_db_adapter(settings=None, config_file=None):
     return db_adapter
 
 
-def async_atomic(func):
+def async_atomic(on_exception=None, raise_exception=False, **kwargs):
     '''
     first argument will be a conn object
     :param func:
     :return:
     '''
+    if not raise_exception and not on_exception:
+        async def default_on_exception(exc_type, exc_val, exc_tb):
+            resp_dict = {}
+            resp_dict['status'] = str(exc_type)
+            resp_dict['traceback'] = str(exc_tb)
+            resp_dict['message'] = str(exc_val)
+            return resp_dict
+        on_exception = default_on_exception
+    else:
+        async def raise_exception(*exp_args):
+            raise exp_args
+        on_exception = raise_exception
+
     _db_adapter = get_db_adapter()
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapped(self, *args, **kwargs):
+            conn = None
+            for i in itertools.chain(args, kwargs.values()):
+                if type(i) is Connection:
+                    conn = i
+                    break
+            if not conn:
+                pool = await _db_adapter.get_pool()
+                async with pool.acquire() as conn:
+                    async with AtomicExceptionHandler(on_exception):
+                        async with conn.transaction():
+                            kwargs['conn'] = conn
+                            return await func(self, *args, **kwargs)
+            else:
+                async with AtomicExceptionHandler(on_exception):
+                    async with conn.transaction():
+                        kwargs['conn'] = conn
+                        return await func(self, *args, **kwargs)
 
-    @functools.wraps(func)
-    async def wrapped(self, *args, **kwargs):
-        conn = None
-        for i in itertools.chain(args, kwargs.values()):
-            if type(i) is Connection:
-                conn = i
-                break
-        if not conn:
-            pool = await _db_adapter.get_pool()
-            async with pool.acquire() as conn:
-                async with conn.transaction():
-                    return await func(self, conn, *args, **kwargs)
-        else:
-            async with conn.transaction():
-                return await func(self, *args, **kwargs)
-
-    return wrapped
+        return wrapped
+    return decorator
 
 
-def async_atomic_func(func):
+def async_atomic_func(on_exception=None, raise_exception=False, **kwargs):
+    '''
+    first argument will be a conn object
+    :param func:
+    :return:
+    '''
+    if not raise_exception and not on_exception:
+        async def default_on_exception(exc_type, exc_val, exc_tb):
+            resp_dict = {}
+            resp_dict['status'] = str(exc_type)
+            resp_dict['traceback'] = str(exc_tb)
+            resp_dict['message'] = str(exc_val)
+            return resp_dict
+        on_exception = default_on_exception
+    else:
+        async def raise_exception(*exp_args):
+            raise exp_args
+        on_exception = raise_exception
+
     _db_adapter = get_db_adapter()
+    def decorator(func):
+        @functools.wraps(func)
+        async def wrapped(self, *args, **kwargs):
+            conn = None
+            for i in itertools.chain(args, kwargs.values()):
+                if type(i) is Connection:
+                    conn = i
+                    break
+            if not conn:
+                pool = await _db_adapter.get_pool()
+                async with pool.acquire() as conn:
+                    async with conn.transaction():
+                        kwargs['conn'] = conn
+                        return await func(*args, **kwargs)
+            else:
+                async with AtomicExceptionHandler(on_exception):
+                    async with conn.transaction():
+                        kwargs['conn'] = conn
+                        return await func(*args, **kwargs)
 
-    @functools.wraps(func)
-    async def wrapped(*args, **kwargs):
-        conn = None
-        for i in itertools.chain(args, kwargs.values()):
-            if type(i) is Connection:
-                conn = i
-                break
-        if not conn:
-            pool = await _db_adapter.get_pool()
-            async with pool.acquire() as conn:
-                async with conn.transaction():
-                    return await func(conn, *args, **kwargs)
-        else:
-            async with conn.transaction():
-                return await func(*args, **kwargs)
-
-    return wrapped
+        return wrapped
+    return decorator
 
 
 class Borg(object):

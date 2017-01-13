@@ -75,34 +75,49 @@ async def test_async_atomic_decorators():
         else:
             return False
 
+    async def exception_handler(*exc_args):
+        return {str(i):i for i in exc_args}
+
+    async def raise_exception(*exc_args):
+        raise exc_args
+
     class foo:
 
         @async_atomic
-        async def setup(self, conn, *args, **kwargs):
+        async def setup(self, *args, **kwargs):
+            conn = kwargs['conn']
             assert await drop_table(conn, 'DROP TABLE IF EXISTS test_async_atomic;')
             assert await create_table(conn, 'CREATE TABLE IF NOT EXISTS test_async_atomic (id serial primary key);')
 
         @async_atomic
-        async def inner_query(self, conn, *args, **kwargs):
+        async def inner_query(self, *args, **kwargs):
+            conn = kwargs['conn']
             assert await conn.fetch('INSERT INTO test_async_atomic DEFAULT VALUES RETURNING *;')
 
-        @async_atomic
-        async def outer_method_1(self, conn, *args, **kwargs):
+        @async_atomic(raise_exception=True)
+        async def outer_method_1(self, *args, **kwargs):
+            conn = kwargs['conn']
             await self.inner_query(conn)
             assert await conn.fetch('INSERT INTO test_async_atomic DEFAULT VALUES RETURNING *;')
             raise Exception
 
-        @async_atomic
-        async def outer_method_2(self, conn, *args, **kwargs):
+        @async_atomic(on_exception=exception_handler)
+        async def test_on_exception(self, *args, **kwargs):
+            conn = kwargs['conn']
+            raise Exception('some text')
+
+        @async_atomic(raise_exception=True)
+        async def outer_method_2(self, *args, **kwargs):
+            conn = kwargs['conn']
             await self.inner_query(conn)
             assert await conn.fetch('INSERT INTO test_async_atomic DEFAULT VALUES RETURNING *;')
 
         @async_atomic
         async def test_atomic_decorator(self, conn):
             await self.setup()
-
             try:
                 await self.outer_method_1()
+                assert False
             except:
                 rt = await conn.fetch('SELECT COUNT(*) FROM test_async_atomic;')
                 print(rt)
@@ -113,5 +128,6 @@ async def test_async_atomic_decorators():
             print(rt)
             rt = rt[0]
             assert tuple(rt)[0] == 2
+            assert type(await self.test_on_exception()) == dict
 
     await foo().test_atomic_decorator()
