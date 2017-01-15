@@ -5,8 +5,14 @@ python:
     - "3.6"
 services:
   - postgresql
+  
 before_script:
-  - psql -c 'create database travis_ci_test;' -U postgres
+    - export LD_LIBRARY_PATH=$HOME/.local/lib/:$LD_LIBRARY_PATH
+    - git clone --depth=1 https://github.com/lloyd/yajl.git
+    - cd yajl && ./configure --prefix=$HOME/.local/
+    - cmake -DCMAKE_INSTALL_PREFIX=$HOME/.local/ && make && make install
+    - cd ..
+    - psql -c 'create database travis_ci_test;' -U postgres
 
 install: "pip install -r tests/requirements.txt"
 script:
