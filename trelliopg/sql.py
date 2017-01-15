@@ -5,6 +5,7 @@ import sys
 from asyncpg.transaction import Transaction
 from asyncpg.connection import Connection
 from asyncpg.pool import Pool, create_pool
+from trelliolibs.utils.helpers import json_response
 
 PY_36 = sys.version_info >= (3, 6)
 
@@ -65,7 +66,7 @@ def async_atomic(on_exception=None, raise_exception=False, **kwargs):
             resp_dict = {}
             resp_dict['status'] = type(exc)
             resp_dict['message'] = str(exc)
-            return resp_dict
+            return json_response(resp_dict)
         on_exception = default_on_exception
     elif raise_exception and not on_exception:
         async def raise_exception(exp_args):
