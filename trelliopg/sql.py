@@ -55,7 +55,7 @@ def get_db_adapter(settings=None, config_file=None):
     return db_adapter
 
 
-def async_atomic(on_exception=None, raise_exception=False, **kwargs):
+def async_atomic(on_exception=None, raise_exception=True, **kwargs):
     '''
     first argument will be a conn object
     :param func:
@@ -66,7 +66,7 @@ def async_atomic(on_exception=None, raise_exception=False, **kwargs):
             resp_dict = {}
             resp_dict['status'] = type(exc)
             resp_dict['message'] = str(exc)
-            return json_response(resp_dict)
+            return resp_dict
         on_exception = default_on_exception
     elif raise_exception and not on_exception:
         async def raise_exception(exp_args):
@@ -103,7 +103,7 @@ def async_atomic(on_exception=None, raise_exception=False, **kwargs):
     return decorator
 
 
-def async_atomic_func(on_exception=None, raise_exception=False, **kwargs):
+def async_atomic_func(on_exception=None, raise_exception=True, **kwargs):
     '''
     first argument will be a conn object
     :param func:
