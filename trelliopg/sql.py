@@ -214,7 +214,7 @@ class DBAdapter(Borg):
                      **update_params: dict) -> list:
 
         values = ','.join(["{}='{}'".format(k, v) for k, v in update_params.items()])
-        where = ' and'.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
+        where = ' and '.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
         query = self.UPDATE.format(table=table, values=values, where=where)
 
         if not con:
@@ -229,7 +229,7 @@ class DBAdapter(Borg):
         return results
 
     async def delete(self, con: Connection = None, table: str = '', where_dict: dict = None):
-        where = ' and'.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
+        where = ' and '.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
         query = self.DELETE.format(table=table, where=where)
 
         if not con:
@@ -267,7 +267,7 @@ class DBAdapter(Borg):
 
         query = self.SELECT.format(table=table)
         query += ' where '
-        query += ' and'.join(['{} = ${}'.format(column, i) for i, column in enumerate(where_dict.keys(), start=1)])
+        query += ' and '.join(['{} = ${}'.format(column, i) for i, column in enumerate(where_dict.keys(), start=1)])
         query += ' order by ${} offset ${} limit ${}'.format(param_count + 1, param_count + 2, param_count + 3)
 
         pool = await self.get_pool()
