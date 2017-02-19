@@ -5,6 +5,7 @@ import sys
 from asyncpg.transaction import Transaction
 from asyncpg.connection import Connection
 from asyncpg.pool import Pool, create_pool
+from trelliolibs.utils.helpers import json_response
 
 PY_36 = sys.version_info >= (3, 6)
 
@@ -54,7 +55,7 @@ def get_db_adapter(settings=None, config_file=None):
     return db_adapter
 
 
-def async_atomic(on_exception=None, raise_exception=False, **kwargs):
+def async_atomic(on_exception=None, raise_exception=True, **kwargs):
     '''
     first argument will be a conn object
     :param func:
@@ -102,7 +103,7 @@ def async_atomic(on_exception=None, raise_exception=False, **kwargs):
     return decorator
 
 
-def async_atomic_func(on_exception=None, raise_exception=False, **kwargs):
+def async_atomic_func(on_exception=None, raise_exception=True, **kwargs):
     '''
     first argument will be a conn object
     :param func:
