@@ -163,7 +163,7 @@ class DBAdapter(Borg):
     SELECT = """select * from {table}"""
     UPDATE = """update {table} set {values} {where} returning *"""
     DELETE = """delete from {table} {where}"""
-    WHERE = """ where {key} = '{value}'"""
+    WHERE = """ {key} = '{value}'"""
 
     def __init__(self, database: str = '', user: str = '', password: str = '', host: str = 'localhost',
                  port: int = 5432, min_size=10, max_size=50, max_queries=50000, setup=None, loop=None, **kwargs):
@@ -215,7 +215,8 @@ class DBAdapter(Borg):
                      **update_params: dict) -> list:
 
         values = ','.join(["{}='{}'".format(k, v) for k, v in update_params.items()])
-        where = ' and '.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
+        where = ' where '
+        where += ' and '.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
         query = self.UPDATE.format(table=table, values=values, where=where)
 
         if not con:
@@ -230,7 +231,8 @@ class DBAdapter(Borg):
         return results
 
     async def delete(self, con: Connection = None, table: str = '', where_dict: dict = None):
-        where = ' and '.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
+        where = ' where '
+        where += ' and '.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
         query = self.DELETE.format(table=table, where=where)
 
         if not con:
