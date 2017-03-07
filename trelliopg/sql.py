@@ -166,7 +166,7 @@ class DBAdapter(Borg):
     WHERE = """ {key} = '{value}'"""
 
     def __init__(self, database: str = '', user: str = '', password: str = '', host: str = 'localhost',
-                 port: int = 5432, min_size=10, max_size=50, max_queries=50000, setup=None, loop=None, **kwargs):
+                 port: int = 5432, min_size=5, max_size=10, max_queries=50000, setup=None, loop=None, **kwargs):
 
         super(DBAdapter, self).__init__()
 
