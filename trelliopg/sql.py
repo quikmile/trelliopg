@@ -2,10 +2,9 @@ import functools
 import itertools
 import os
 import sys
-from asyncpg.transaction import Transaction
+
 from asyncpg.connection import Connection
 from asyncpg.pool import Pool, create_pool
-from trelliolibs.utils.helpers import json_response
 
 PY_36 = sys.version_info >= (3, 6)
 
@@ -14,8 +13,8 @@ try:
 except ImportError:
     import json
 
-class AtomicExceptionHandler:
 
+class AtomicExceptionHandler:
     def __init__(self, exp_coro, rt_dict):
         self.exp_coro = exp_coro
         self.rt_dict = rt_dict
@@ -25,8 +24,8 @@ class AtomicExceptionHandler:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if exc_type:
-            return_dict =  await self.exp_coro(exc_type, exc_val, exc_tb)
-            for key,val in return_dict.items():
+            return_dict = await self.exp_coro(exc_type, exc_val, exc_tb)
+            for key, val in return_dict.items():
                 self.rt_dict[key] = val
         return True
 
@@ -67,13 +66,16 @@ def async_atomic(on_exception=None, raise_exception=True, **kwargs):
             resp_dict['status'] = type(exc)
             resp_dict['message'] = str(exc)
             return resp_dict
+
         on_exception = default_on_exception
     elif raise_exception and not on_exception:
         async def raise_exception(exp_args):
             raise exp_args
+
         on_exception = raise_exception
 
     _db_adapter = get_db_adapter()
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapped(self, *args, **kwargs):
@@ -100,6 +102,7 @@ def async_atomic(on_exception=None, raise_exception=True, **kwargs):
                     return await on_exception(e)
 
         return wrapped
+
     return decorator
 
 
@@ -115,13 +118,16 @@ def async_atomic_func(on_exception=None, raise_exception=True, **kwargs):
             resp_dict['status'] = type(exc)
             resp_dict['message'] = str(exc)
             return resp_dict
+
         on_exception = default_on_exception
     elif raise_exception and not on_exception:
         async def raise_exception(exp_args):
             raise exp_args
+
         on_exception = raise_exception
 
     _db_adapter = get_db_adapter()
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapped(*args, **kwargs):
@@ -148,6 +154,7 @@ def async_atomic_func(on_exception=None, raise_exception=True, **kwargs):
                     return await on_exception(e)
 
         return wrapped
+
     return decorator
 
 
@@ -269,8 +276,9 @@ class DBAdapter(Borg):
         param_count = len(where_dict)
 
         query = self.SELECT.format(table=table)
-        query += ' where '
-        query += ' and '.join(['{} = ${}'.format(column, i) for i, column in enumerate(where_dict.keys(), start=1)])
+        if param_count > 0:
+            query += ' where '
+            query += ' and '.join(['{} = ${}'.format(column, i) for i, column in enumerate(where_dict.keys(), start=1)])
         query += ' order by ${} offset ${} limit ${}'.format(param_count + 1, param_count + 2, param_count + 3)
 
         pool = await self.get_pool()
