@@ -222,8 +222,11 @@ class DBAdapter(Borg):
                      **update_params: dict) -> list:
 
         values = ','.join(["{}='{}'".format(k, v) for k, v in update_params.items()])
-        where = ' where '
-        where += ' and '.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
+
+        where = ''
+        if where_dict is not None:
+            where = ' where '
+            where += ' and '.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
         query = self.UPDATE.format(table=table, values=values, where=where)
 
         if not con:
@@ -273,12 +276,13 @@ class DBAdapter(Borg):
         return results
 
     async def where(self, table: str, offset=0, limit=100, order_by='created desc', **where_dict: dict) -> list:
+        query = self.SELECT.format(table=table)
         param_count = len(where_dict)
 
-        query = self.SELECT.format(table=table)
         if param_count > 0:
-            query += ' where '
-            query += ' and '.join(['{} = ${}'.format(column, i) for i, column in enumerate(where_dict.keys(), start=1)])
+            where_query, where_dict = self._where_query(where_dict)
+            query += where_query
+
         query += ' order by ${} offset ${} limit ${}'.format(param_count + 1, param_count + 2, param_count + 3)
 
         pool = await self.get_pool()
@@ -288,6 +292,29 @@ class DBAdapter(Borg):
             results = await stmt.fetch(*params)
 
         return results
+
+    @staticmethod
+    def _where_query(where_dict):
+        query = ''
+        where_list = []
+
+        for i, key in enumerate(where_dict.keys(), start=1):
+            split_key = key.split('__')
+            if len(split_key) > 1:
+                column = split_key[0]
+                operator = split_key[1]
+                if operator == 'in':
+                    where_dict[key] = "({})".format(','.join(["'{}'".format(v) for v in where_dict[key]]))
+            else:
+                column = key
+                operator = '='
+
+            placeholder = '{} {} ${}'.format(column, operator, i)
+            where_list.append(placeholder)
+
+        query += ' where '
+        query += ' and '.join(where_list)
+        return query, where_dict
 
     def _compat(self):
         ld = {}
