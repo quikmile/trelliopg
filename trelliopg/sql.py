@@ -297,14 +297,16 @@ class DBAdapter(Borg):
     def _where_query(where_dict):
         query = ''
         where_list = []
-
+        update_dict = dict()
         for i, key in enumerate(where_dict.keys(), start=1):
+            update_dict[key] = where_dict[key]
+
             split_key = key.split('__')
             if len(split_key) > 1:
                 column = split_key[0]
                 operator = split_key[1]
                 if operator == 'in':
-                    where_dict[key] = "({})".format(','.join(["'{}'".format(v) for v in where_dict[key]]))
+                    update_dict[key] = "({})".format(','.join(["'{}'".format(v) for v in where_dict[key]]))
             else:
                 column = key
                 operator = '='
@@ -314,7 +316,7 @@ class DBAdapter(Borg):
 
         query += ' where '
         query += ' and '.join(where_list)
-        return query, where_dict
+        return query, update_dict
 
     def _compat(self):
         ld = {}
