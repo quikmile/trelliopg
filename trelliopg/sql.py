@@ -297,12 +297,12 @@ class DBAdapter(Borg):
                 column = split_key[0]
                 operator = split_key[1]
                 if operator == 'in':
-                    where_dict[key] = '({})'.format(','.join(["'{}'".format(v) for v in where_dict[key]]))
+                    where_dict[key] = "({})".format(','.join(["'{}'".format(v) for v in where_dict[key]]))
             else:
                 column = key
                 operator = '='
 
-            placeholder = '{} {} {}'.format(column, operator, where_dict[key])
+            placeholder = "{} {} '{}'".format(column, operator, where_dict[key])
             where_list.append(placeholder)
 
         query += ' where '
