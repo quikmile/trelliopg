@@ -277,19 +277,13 @@ class DBAdapter(Borg):
 
     async def where(self, table: str, offset=0, limit=100, order_by='created desc', **where_dict: dict) -> list:
         query = self.SELECT.format(table=table)
-        param_count = len(where_dict)
-
-        if param_count > 0:
-            where_query, where_dict = self._where_query(where_dict)
-            query += where_query
-
-        query += ' order by ${} offset ${} limit ${}'.format(param_count + 1, param_count + 2, param_count + 3)
+        if where_dict:
+            query += self._where_query(where_dict)
+        query += ' order by {} offset {} limit {}'.format(order_by, offset, limit)
 
         pool = await self.get_pool()
         async with pool.acquire() as con:
-            stmt = await con.prepare(query)
-            params = list(where_dict.values()) + [order_by, offset, limit]
-            results = await stmt.fetch(*params)
+            results = await con.fetch(query)
 
         return results
 
@@ -297,26 +291,23 @@ class DBAdapter(Borg):
     def _where_query(where_dict):
         query = ''
         where_list = []
-        update_dict = dict()
         for i, key in enumerate(where_dict.keys(), start=1):
-            update_dict[key] = where_dict[key]
-
             split_key = key.split('__')
             if len(split_key) > 1:
                 column = split_key[0]
                 operator = split_key[1]
                 if operator == 'in':
-                    update_dict[key] = "({})".format(','.join(["'{}'".format(v) for v in where_dict[key]]))
+                    where_dict[key] = '({})'.format(','.join(["'{}'".format(v) for v in where_dict[key]]))
             else:
                 column = key
                 operator = '='
 
-            placeholder = '{} {} ${}'.format(column, operator, i)
+            placeholder = '{} {} {}'.format(column, operator, where_dict[key])
             where_list.append(placeholder)
 
         query += ' where '
         query += ' and '.join(where_list)
-        return query, update_dict
+        return query
 
     def _compat(self):
         ld = {}
