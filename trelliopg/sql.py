@@ -315,7 +315,7 @@ class DBAdapter(Borg):
         if offset:
             query += ' offset {}'.format(offset)
         if limit:
-            query += 'limit {}'.format(limit)
+            query += ' limit {}'.format(limit)
 
         return query
 
