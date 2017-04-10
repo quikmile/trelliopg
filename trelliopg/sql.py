@@ -278,8 +278,7 @@ class DBAdapter(Borg):
     async def where(self, table: str, offset=0, limit=100, order_by='created desc', **where_dict: dict) -> list:
         query = self.SELECT.format(table=table)
         if where_dict:
-            query += self._where_query(where_dict)
-        query += ' order by {} offset {} limit {}'.format(order_by, offset, limit)
+            query += self._where_query(where_dict, offset, limit, order_by)
 
         pool = await self.get_pool()
         async with pool.acquire() as con:
@@ -288,7 +287,7 @@ class DBAdapter(Borg):
         return results
 
     @staticmethod
-    def _where_query(where_dict):
+    def _where_query(where_dict, offset, limit, order_by):
         query = ''
         where_list = []
         for i, key in enumerate(where_dict.keys(), start=1):
@@ -310,6 +309,14 @@ class DBAdapter(Borg):
 
         query += ' where '
         query += ' and '.join(where_list)
+
+        if order_by:
+            query += ' order by {}'.format(order_by)
+        if offset:
+            query += ' offset {}'.format(offset)
+        if limit:
+            query += 'limit {}'.format(limit)
+
         return query
 
     def _compat(self):
