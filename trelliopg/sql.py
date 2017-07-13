@@ -289,26 +289,28 @@ class DBAdapter(Borg):
     @staticmethod
     def _where_query(where_dict, offset, limit, order_by):
         query = ''
-        where_list = []
-        for i, key in enumerate(where_dict.keys(), start=1):
-            split_key = key.split('__')
-            if len(split_key) > 1:
-                column = split_key[0]
-                operator = split_key[1]
-                if operator == 'in':
-                    value = "({})".format(','.join(["'{}'".format(v) for v in where_dict[key]]))
+
+        if where_dict:
+            where_list = []
+            for i, key in enumerate(where_dict.keys(), start=1):
+                split_key = key.split('__')
+                if len(split_key) > 1:
+                    column = split_key[0]
+                    operator = split_key[1]
+                    if operator == 'in':
+                        value = "({})".format(','.join(["'{}'".format(v) for v in where_dict[key]]))
+                    else:
+                        value = "'{}'".format(where_dict[key])
                 else:
+                    column = key
+                    operator = '='
                     value = "'{}'".format(where_dict[key])
-            else:
-                column = key
-                operator = '='
-                value = "'{}'".format(where_dict[key])
 
-            placeholder = "{} {} {}".format(column, operator, value)
-            where_list.append(placeholder)
+                placeholder = "{} {} {}".format(column, operator, value)
+                where_list.append(placeholder)
 
-        query += ' where '
-        query += ' and '.join(where_list)
+            query += ' where '
+            query += ' and '.join(where_list)
 
         if order_by:
             query += ' order by {}'.format(order_by)
