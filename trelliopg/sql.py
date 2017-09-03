@@ -293,18 +293,36 @@ class DBAdapter(Borg):
         if where_dict:
             where_list = []
             for i, key in enumerate(where_dict.keys(), start=1):
+                operator = '='
+                value = "'{}'".format(where_dict[key])
+
                 split_key = key.split('__')
                 if len(split_key) > 1:
                     column = split_key[0]
-                    operator = split_key[1]
-                    if operator == 'in':
+                    spliter = split_key[1]
+
+                    if spliter == 'in':
+                        operator = 'in'
                         value = "({})".format(','.join(["'{}'".format(v) for v in where_dict[key]]))
-                    else:
-                        value = "'{}'".format(where_dict[key])
+
+                    if spliter == 'not_in':
+                        operator = 'not in'
+                        value = "({})".format(','.join(["'{}'".format(v) for v in where_dict[key]]))
+
+                    if spliter == 'lt':
+                        operator = '<'
+
+                    if spliter == 'lte':
+                        operator = '<='
+
+                    if spliter == 'gt':
+                        operator = '>'
+
+                    if spliter == 'gte':
+                        operator = '>='
+
                 else:
                     column = key
-                    operator = '='
-                    value = "'{}'".format(where_dict[key])
 
                 placeholder = "{} {} {}".format(column, operator, value)
                 where_list.append(placeholder)
