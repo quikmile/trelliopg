@@ -166,10 +166,10 @@ class Borg(object):
 
 
 class DBAdapter(Borg):
-    INSERT = """INSERT INTO {table} ({columns}) VALUES ({values}) returning *;"""
-    SELECT = """select * from {table}"""
-    UPDATE = """update {table} set {values} {where} returning *"""
-    DELETE = """delete from {table} {where}"""
+    INSERT = """INSERT INTO {TABLE} ({columns}) VALUES ({VALUES}) RETURNING *;"""
+    SELECT = """SELECT * FROM {table}"""
+    UPDATE = """UPDATE {TABLE} SET {VALUES} {WHERE} RETURNING *"""
+    DELETE = """DELETE FROM {TABLE} {WHERE}"""
     WHERE = """ {key} = '{value}'"""
 
     def __init__(self, database: str = '', user: str = '', password: str = '', host: str = 'localhost',
@@ -264,7 +264,7 @@ class DBAdapter(Borg):
             async with con.transaction():
                 await con.execute(query)
 
-    async def select(self, table: str, offset=0, limit=100, order_by='created desc') -> list:
+    async def select(self, table: str, offset=0, limit='ALL', order_by='created desc') -> list:
         query = self.SELECT.format(table=table)
         query += ' order by $1 offset $2 limit $3'
 
@@ -275,10 +275,9 @@ class DBAdapter(Borg):
 
         return results
 
-    async def where(self, table: str, offset=0, limit=100, order_by='created desc', **where_dict: dict) -> list:
+    async def where(self, table: str, offset=None, limit=None, order_by=None, **where_dict: dict) -> list:
         query = self.SELECT.format(table=table)
-        if where_dict:
-            query += self._where_query(where_dict, offset, limit, order_by)
+        query += self._where_query(where_dict, offset, limit, order_by)
 
         pool = await self.get_pool()
         async with pool.acquire() as con:
