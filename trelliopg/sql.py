@@ -166,10 +166,10 @@ class Borg(object):
 
 
 class DBAdapter(Borg):
-    INSERT = """INSERT INTO {TABLE} ({columns}) VALUES ({VALUES}) RETURNING *;"""
+    INSERT = """INSERT INTO {table} ({columns}) VALUES ({values}) RETURNING *;"""
     SELECT = """SELECT * FROM {table}"""
-    UPDATE = """UPDATE {TABLE} SET {VALUES} {WHERE} RETURNING *"""
-    DELETE = """DELETE FROM {TABLE} {WHERE}"""
+    UPDATE = """UPDATE {table} SET {values} {where} RETURNING *"""
+    DELETE = """DELETE FROM {table} {where}"""
     WHERE = """ {key} = '{value}'"""
 
     def __init__(self, database: str = '', user: str = '', password: str = '', host: str = 'localhost',
