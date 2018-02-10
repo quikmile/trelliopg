@@ -158,7 +158,7 @@ def async_atomic_func(on_exception=None, raise_exception=True, **kwargs):
     return decorator
 
 
-class Borg(object):
+class Borg:
     __shared_state = dict()
 
     def __init__(self):
@@ -167,16 +167,15 @@ class Borg(object):
 
 class DBAdapter(Borg):
     INSERT = """INSERT INTO {table} ({columns}) VALUES ({values}) RETURNING *;"""
-    SELECT = """SELECT * FROM {table}"""
+    SELECT = """SELECT {columns} FROM {table}"""
     UPDATE = """UPDATE {table} SET {values} {where} RETURNING *"""
     DELETE = """DELETE FROM {table} {where}"""
     WHERE = """ {key} = '{value}'"""
 
     def __init__(self, database: str = '', user: str = '', password: str = '', host: str = 'localhost',
-                 port: int = 5432, min_size=5, max_size=10, max_queries=50000, setup=None, loop=None, **kwargs):
+                 port: int = 5432, min_size=50, max_size=100, max_queries=50000, setup=None, loop=None, **kwargs):
 
         super(DBAdapter, self).__init__()
-
         self._params = dict()
         self._params['database'] = database
         self._params['user'] = user
@@ -264,8 +263,10 @@ class DBAdapter(Borg):
             async with con.transaction():
                 await con.execute(query)
 
-    async def select(self, table: str, offset=0, limit='ALL', order_by='created desc') -> list:
-        query = self.SELECT.format(table=table)
+    async def select(self, table: str, offset=0, limit='ALL', order_by='created desc', columns='*') -> list:
+        if isinstance(columns, list):
+            columns = ','.join(columns)
+        query = self.SELECT.format(columns=columns, table=table)
         query += ' order by $1 offset $2 limit $3'
 
         pool = await self.get_pool()
@@ -275,8 +276,10 @@ class DBAdapter(Borg):
 
         return results
 
-    async def where(self, table: str, offset=None, limit=None, order_by=None, **where_dict: dict) -> list:
-        query = self.SELECT.format(table=table)
+    async def where(self, table: str, offset=None, limit=None, order_by=None, columns='*', **where_dict: dict) -> list:
+        if isinstance(columns, list):
+            columns = ','.join(columns)
+        query = self.SELECT.format(columns=columns, table=table)
         query += self._where_query(where_dict, offset, limit, order_by)
 
         pool = await self.get_pool()
@@ -286,7 +289,7 @@ class DBAdapter(Borg):
         return results
 
     @staticmethod
-    def _where_query(where_dict, offset, limit, order_by):
+    def _where_query(where_dict, offset=None, limit=None, order_by=None):
         query = ''
 
         if where_dict:
