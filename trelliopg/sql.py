@@ -176,12 +176,15 @@ class DBAdapter(Borg):
                  port: int = 5432, min_size=5, max_size=10, max_queries=50000, setup=None, loop=None, **kwargs):
 
         super(DBAdapter, self).__init__()
+        self._dsn = dict()
+        self._dsn['database'] = database
+        self._dsn['user'] = user
+        self._dsn['password'] = password
+        self._dsn['host'] = host
+        self._dsn['port'] = port
+
         self._params = dict()
-        self._params['database'] = database
-        self._params['user'] = user
-        self._params['password'] = password
-        self._params['host'] = host
-        self._params['port'] = port
+        self._params['dsn'] = 'postgres://{user}:{password}@{host}:{port}/{database}'.format(**self._dsn)
         self._params['min_size'] = min_size
         self._params['max_size'] = max_size
         self._params['max_queries'] = max_queries
