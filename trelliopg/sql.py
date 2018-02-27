@@ -301,13 +301,14 @@ class DBAdapter(Borg):
             where_query = None
             search_query = None
             if where_dict.get('search') and isinstance(where_dict.get('search'), dict):
-                search_dict = where_dict.pop('search')
+                search_columns = where_dict['search'].get('columns', [])
+                search_term = where_dict['search'].get('term', '')
                 search_list = []
 
-                for key in search_dict.keys():
+                for key in search_columns:
                     column = key
                     operator = 'ilike'
-                    value = "'%{}%'".format(search_dict[key])
+                    value = "'%{}%'".format(search_term)
 
                     split_key = key.split('__')
                     if len(split_key) > 1:
@@ -316,27 +317,27 @@ class DBAdapter(Borg):
 
                         if spliter == 'contains':
                             operator = 'like'
-                            value = "'%{}%'".format(search_dict[key])
+                            value = "'%{}%'".format(search_term)
 
                         if spliter == 'icontains':
                             operator = 'ilike'
-                            value = "'%{}%'".format(search_dict[key])
+                            value = "'%{}%'".format(search_term)
 
                         if spliter == 'startswith':
                             operator = 'like'
-                            value = "'{}%'".format(search_dict[key])
+                            value = "'{}%'".format(search_term)
 
                         if spliter == 'istartswith':
                             operator = 'ilike'
-                            value = "'{}%'".format(search_dict[key])
+                            value = "'{}%'".format(search_term)
 
                         if spliter == 'endswith':
                             operator = 'like'
-                            value = "'%{}'".format(search_dict[key])
+                            value = "'%{}'".format(search_term)
 
                         if spliter == 'iendswith':
                             operator = 'ilike'
-                            value = "'%{}'".format(search_dict[key])
+                            value = "'%{}'".format(search_term)
 
                     placeholder = "{} {} {}".format(column, operator, value)
                     search_list.append(placeholder)
@@ -372,6 +373,30 @@ class DBAdapter(Borg):
 
                     if spliter == 'gte':
                         operator = '>='
+
+                    if spliter == 'contains':
+                        operator = 'like'
+                        value = "'%{}%'".format(search_term)
+
+                    if spliter == 'icontains':
+                        operator = 'ilike'
+                        value = "'%{}%'".format(search_term)
+
+                    if spliter == 'startswith':
+                        operator = 'like'
+                        value = "'{}%'".format(search_term)
+
+                    if spliter == 'istartswith':
+                        operator = 'ilike'
+                        value = "'{}%'".format(search_term)
+
+                    if spliter == 'endswith':
+                        operator = 'like'
+                        value = "'%{}'".format(search_term)
+
+                    if spliter == 'iendswith':
+                        operator = 'ilike'
+                        value = "'%{}'".format(search_term)
 
                 else:
                     column = key
