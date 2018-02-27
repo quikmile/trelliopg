@@ -298,7 +298,7 @@ class DBAdapter(Borg):
         if where_dict:
             where_list = []
             for i, key in enumerate(where_dict.keys(), start=1):
-                operator = '='
+                operator = 'ILIKE'
                 value = "'{}'".format(where_dict[key])
 
                 split_key = key.split('__')
