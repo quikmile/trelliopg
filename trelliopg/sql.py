@@ -296,9 +296,56 @@ class DBAdapter(Borg):
         query = ''
 
         if where_dict:
+            query += ' where '
+
+            where_query = None
+            search_query = None
+            if where_dict.get('search') and isinstance(where_dict.get('search'), dict):
+                search_dict = where_dict.pop('search')
+                search_list = []
+
+                for key in search_dict.keys():
+                    column = key
+                    operator = 'ilike'
+                    value = "'%{}%'".format(search_dict[key])
+
+                    split_key = key.split('__')
+                    if len(split_key) > 1:
+                        column = split_key[0]
+                        spliter = split_key[1]
+
+                        if spliter == 'contains':
+                            operator = 'like'
+                            value = "'%{}%'".format(search_dict[key])
+
+                        if spliter == 'icontains':
+                            operator = 'ilike'
+                            value = "'%{}%'".format(search_dict[key])
+
+                        if spliter == 'startswith':
+                            operator = 'like'
+                            value = "'{}%'".format(search_dict[key])
+
+                        if spliter == 'istartswith':
+                            operator = 'ilike'
+                            value = "'{}%'".format(search_dict[key])
+
+                        if spliter == 'endswith':
+                            operator = 'like'
+                            value = "'%{}'".format(search_dict[key])
+
+                        if spliter == 'iendswith':
+                            operator = 'ilike'
+                            value = "'%{}'".format(search_dict[key])
+
+                    placeholder = "{} {} {}".format(column, operator, value)
+                    search_list.append(placeholder)
+
+                search_query = ' or '.join(search_list)
+
             where_list = []
-            for i, key in enumerate(where_dict.keys(), start=1):
-                operator = 'ILIKE'
+            for key in where_dict.keys():
+                operator = '='
                 value = "'{}'".format(where_dict[key])
 
                 split_key = key.split('__')
@@ -331,9 +378,15 @@ class DBAdapter(Borg):
 
                 placeholder = "{} {} {}".format(column, operator, value)
                 where_list.append(placeholder)
+            if where_list:
+                where_query = ' and '.join(where_list)
 
-            query += ' where '
-            query += ' and '.join(where_list)
+            if search_query and where_query:
+                query += ' (' + search_query + ') and (' + where_query + ') '
+            elif search_query and where_query is None:
+                query += search_query
+            elif where_query and search_query is None:
+                query += where_query
 
         if order_by:
             query += ' order by {}'.format(order_by)
