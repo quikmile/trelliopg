@@ -303,7 +303,7 @@ class DBAdapter(Borg):
             if where_dict.get('search') and isinstance(where_dict.get('search'), dict):
                 _search = where_dict.pop('search')
                 search_columns = _search.get('columns', [])
-                search_term = where_dict['search'].get('term', '')
+                search_term = _search.get('term', '')
                 search_list = []
 
                 for key in search_columns:
@@ -420,7 +420,7 @@ class DBAdapter(Borg):
             query += ' offset {}'.format(offset)
         if limit:
             query += ' limit {}'.format(limit)
-        print(query)
+
         return query
 
     def _compat(self):
