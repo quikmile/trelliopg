@@ -420,7 +420,7 @@ class DBAdapter(Borg):
             query += ' offset {}'.format(offset)
         if limit:
             query += ' limit {}'.format(limit)
-
+        print(query)
         return query
 
     def _compat(self):
