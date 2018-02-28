@@ -345,64 +345,66 @@ class DBAdapter(Borg):
                 search_query = ' or '.join(search_list)
 
             where_list = []
-            for key in where_dict.keys():
-                operator = '='
-                value = "'{}'".format(where_dict[key])
+            if 'filter' in where_dict:
+                for key in where_dict['filter'].keys():
+                    operator = '='
+                    value = "'{}'".format(where_dict['filter'][key])
 
-                split_key = key.split('__')
-                if len(split_key) > 1:
-                    column = split_key[0]
-                    spliter = split_key[1]
+                    split_key = key.split('__')
+                    if len(split_key) > 1:
+                        column = split_key[0]
+                        spliter = split_key[1]
 
-                    if spliter == 'in':
-                        operator = 'in'
-                        value = "({})".format(','.join(["'{}'".format(v) for v in where_dict[key]]))
+                        if spliter == 'in':
+                            operator = 'in'
+                            value = "({})".format(','.join(["'{}'".format(v) for v in where_dict[key]]))
 
-                    if spliter == 'not_in':
-                        operator = 'not in'
-                        value = "({})".format(','.join(["'{}'".format(v) for v in where_dict[key]]))
+                        if spliter == 'not_in':
+                            operator = 'not in'
+                            value = "({})".format(','.join(["'{}'".format(v) for v in where_dict[key]]))
 
-                    if spliter == 'lt':
-                        operator = '<'
+                        if spliter == 'lt':
+                            operator = '<'
 
-                    if spliter == 'lte':
-                        operator = '<='
+                        if spliter == 'lte':
+                            operator = '<='
 
-                    if spliter == 'gt':
-                        operator = '>'
+                        if spliter == 'gt':
+                            operator = '>'
 
-                    if spliter == 'gte':
-                        operator = '>='
+                        if spliter == 'gte':
+                            operator = '>='
 
-                    if spliter == 'contains':
-                        operator = 'like'
-                        value = "'%{}%'".format(search_term)
+                        if spliter == 'contains':
+                            operator = 'like'
+                            value = "'%{}%'".format(search_term)
 
-                    if spliter == 'icontains':
-                        operator = 'ilike'
-                        value = "'%{}%'".format(search_term)
+                        if spliter == 'icontains':
+                            operator = 'ilike'
+                            value = "'%{}%'".format(search_term)
 
-                    if spliter == 'startswith':
-                        operator = 'like'
-                        value = "'{}%'".format(search_term)
+                        if spliter == 'startswith':
+                            operator = 'like'
+                            value = "'{}%'".format(search_term)
 
-                    if spliter == 'istartswith':
-                        operator = 'ilike'
-                        value = "'{}%'".format(search_term)
+                        if spliter == 'istartswith':
+                            operator = 'ilike'
+                            value = "'{}%'".format(search_term)
 
-                    if spliter == 'endswith':
-                        operator = 'like'
-                        value = "'%{}'".format(search_term)
+                        if spliter == 'endswith':
+                            operator = 'like'
+                            value = "'%{}'".format(search_term)
 
-                    if spliter == 'iendswith':
-                        operator = 'ilike'
-                        value = "'%{}'".format(search_term)
+                        if spliter == 'iendswith':
+                            operator = 'ilike'
+                            value = "'%{}'".format(search_term)
 
-                else:
-                    column = key
+                    else:
+                        column = key
 
-                placeholder = "{} {} {}".format(column, operator, value)
-                where_list.append(placeholder)
+                    placeholder = "{} {} {}".format(column, operator, value)
+                    where_list.append(placeholder)
+
             if where_list:
                 where_query = ' and '.join(where_list)
 
