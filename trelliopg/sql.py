@@ -223,7 +223,9 @@ class DBAdapter(Borg):
     async def update(self, con: Connection = None, table: str = '', where_dict: dict = None,
                      **update_params: dict) -> list:
 
-        values = ','.join(["{}='{}'".format(k, v) for k, v in update_params.items()])
+        values_list = ["{}='{}'".format(k, v) for k, v in update_params.items() if v is not None]
+        values_list.extend(["{}=null".format(k, v) for k, v in update_params.items() if v is None])
+        values = ','.join(values_list)
 
         where = ''
         if where_dict is not None:
