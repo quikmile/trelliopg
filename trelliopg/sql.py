@@ -229,8 +229,9 @@ class DBAdapter(Borg):
 
         where = ''
         if where_dict is not None:
-            where = ' where '
-            where += ' and '.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
+            # where = ' where '
+            # where += ' and '.join([self.WHERE.format(key=k, value=v) for k, v in where_dict.items()])
+            where = self._where_query(where_dict, update_query=True)
         query = self.UPDATE.format(table=table, values=values, where=where)
 
         if not con:
@@ -294,7 +295,7 @@ class DBAdapter(Borg):
         return results
 
     @staticmethod
-    def _where_query(where_dict, offset=None, limit=None, order_by=None):
+    def _where_query(where_dict, offset=None, limit=None, order_by=None, update_query=False):
         query = ''
 
         if where_dict:
@@ -416,12 +417,13 @@ class DBAdapter(Borg):
             elif where_query and search_query is None:
                 query += where_query
 
-        if order_by:
-            query += ' order by {}'.format(order_by)
-        if offset:
-            query += ' offset {}'.format(offset)
-        if limit:
-            query += ' limit {}'.format(limit)
+        if not update_query:
+            if order_by:
+                query += ' order by {}'.format(order_by)
+            if offset:
+                query += ' offset {}'.format(offset)
+            if limit:
+                query += ' limit {}'.format(limit)
 
         return query
 
